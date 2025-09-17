@@ -1,36 +1,26 @@
-- name: Deploy Healthcare App on EC2
+- name: Configure Docker on EC2 Instances
   hosts: ansiblegroup
   become: true
-
+  connection: ssh
   tasks:
-    - name: Install required packages
+    - name: Update apt
       apt:
-        name:
-          - docker.io
-          - python3-pip
-        state: present
         update_cache: yes
 
-    - name: Install Docker Python SDK (required for docker_container module)
-      pip:
-        name: docker
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
 
-    - name: Ensure Docker service is running
+    - name: Start Docker Service
       service:
         name: docker
         state: started
-        enabled: true
+        enabled: yes
 
-    - name: Stop and remove existing container (if any)
-      docker_container:
-        name: priyanka-health-care
-        state: absent
+    - name: Remove old container (if running)
+      command: docker rm -f priyanka-health-care
+      ignore_errors: yes
 
-    - name: Deploy new Healthcare container
-      docker_container:
-        name: priyanka-health-care
-        image: "{{ image_name }}:{{ image_tag }}"
-        state: started
-        restart_policy: always
-        published_ports:
-          - "8084:8082"
+    - name: Run Docker Container
+      command: docker run -itd --name priyanka-health-care -p 8084:8082 {{ image_name }}:{{ image_tag }}
