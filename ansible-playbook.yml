@@ -1,7 +1,7 @@
+---
 - name: Configure Docker on EC2 Instances
-  hosts: all
+  hosts: ansiblegroup
   become: true
-  connection: ssh
   tasks:
     - name: Update apt
       apt:
@@ -23,4 +23,6 @@
       ignore_errors: yes
 
     - name: Run Docker Container
-      command: docker run -itd --name priyanka-health-care -p 8084:8082 {{ image_name }}:{{ image_tag }}
+      command: >
+        docker run -itd --name priyanka-health-care
+        -p 8084:8082 {{ image_name }}:{{ image_tag }}
