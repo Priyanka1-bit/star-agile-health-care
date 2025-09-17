@@ -14,7 +14,7 @@ spec:
         app: priyanka-health-care
     spec:
       containers:
-        - name: Healthcare
+        - name: healthcare
           image: priyan263/priyanka-health-care
           ports:
             - containerPort: 8084
