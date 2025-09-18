@@ -1,32 +1,46 @@
-def containerName="priyanka-health-care"
-def tag="latest"
-def dockerHubUser="priyan263"
-def gitURL="https://github.com/Priyanka1-bit/star-agile-health-care.git"
+def containerName = "priyanka-health-care"
+def tag = "latest"
+def dockerHubUser = "priyan263"
+def gitURL = "https://github.com/Priyanka1-bit/star-agile-health-care.git"
 
 node {
-      stage('checkout') {
-	         git changelog: false, credentialsId: 'GitHubCreds', poll: false, url: 'https://github.com/Priyanka1-bit/star-agile-health-care.git'
-	  }
-	  stage('build') {
-	         sh "mvn clean install"
-	  }
-	  stage('clean any existing docker image'){
-	         sh "docker image prune -f"
-	  }
-	  stage('build the docker image'){
-	         sh "docker build -t $containerName:$tag  --pull --no-cache ."
-			 echo  "*****image build sucessfully completed******"
-	  }
-	  stage('push to docker hub'){
-	         withCredentials([usernamePassword(credentialsId: 'dockerhubcreds', passwordVariable: 'dockerHubPass', usernameVariable: 'dockerHubUser')]) {
-                sh "docker login -u $dockerHubUser -p $dockerHubPass"
-				sh "docker tag $containerName:$tag $dockerHubUser/$containerName:$tag"
-				sh "docker push $dockerHubUser/$containerName:$tag"
-				echo "***********image push sucessfully done*********"
-            }
-	  }
-	  stage('deploy the container'){
-	           sh "ansible-playbook ansible-playbook.yml"
-	  }
-	  
-     }
+    stage('Checkout') {
+        git changelog: false, credentialsId: 'GitHubCreds', poll: false, url: gitURL
+    }
+
+    stage('Build with Maven') {
+        sh "mvn clean install"
+    }
+
+    stage('Clean any existing Docker images') {
+        sh "docker image prune -f"
+    }
+
+    stage('Build the Docker Image') {
+        sh "docker build -t ${containerName}:${tag} --pull --no-cache ."
+        echo "***** Image build successfully completed *****"
+    }
+
+    stage('Push Docker Image') {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                          usernameVariable: 'DOCKER_USER',
+                                          passwordVariable: 'DOCKER_PASS')]) {
+            sh """
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker tag ${containerName}:${tag} ${DOCKER_USER}/${containerName}:${tag}
+                docker push ${DOCKER_USER}/${containerName}:${tag}
+            """
+            echo "*********** Image push successfully done *********"
+        }
+    }
+
+    stage('Deploy to Kubernetes') {
+    withEnv(["KUBECONFIG=/var/lib/jenkins/.kube/config"]) {
+        sh "kubectl apply -f kubernetesfile.yml --validate=false"
+        sh "kubectl get pods -o wide"
+        sh "kubectl get all"
+    }
+}
+
+
+}
